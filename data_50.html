@@ -1,0 +1,120 @@
+# 용량문제로 인해 영상 파일은 따로 제출하지 않습니다.
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>ReClip Log Collector</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  #captionList {
+    margin-top: 15px;
+    padding-left: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h2>ReClip 시청 로그 수집 데모</h2>
+
+<video id="video" width="600" controls>
+  <source src="" type="video/mp4">
+</video>
+
+<br>
+
+<button onclick="addCaption()">📝 캡션(스크랩) 추가</button>
+<button onclick="downloadXLSX()">📊 로그 XLSX 다운로드</button>
+
+<ul id="captionList"></ul>
+
+<script>
+const userId = 1;               // 사용자 ID
+const SECTION_LENGTH = 300;     // 5분 = 300초
+let logs = [];
+let captionCount = 0;
+
+// 현재 구간 계산
+function getSectionId(time) {
+  return Math.floor(time / SECTION_LENGTH);
+}
+
+const video = document.getElementById("video");
+const captionList = document.getElementById("captionList");
+
+// 정지
+video.addEventListener("pause", () => {
+  logs.push({
+    user_id: userId,
+    section_id: getSectionId(video.currentTime),
+    action: "pause",
+    value: 1,
+    timestamp: video.currentTime
+  });
+});
+
+video.addEventListener("play", () => {
+  logs.push({
+    user_id: userId,
+    section_id: getSectionId(video.currentTime),
+    action: "play",
+    value: 1,
+    timestamp: video.currentTime
+  });
+});
+
+// 되감기
+video.addEventListener("seeked", () => {
+  logs.push({
+    user_id: userId,
+    section_id: getSectionId(video.currentTime),
+    action: "rewind",
+    value: 1,
+    timestamp: video.currentTime
+  });
+});
+
+// 캡션(스크랩)
+function addCaption() {
+  const time = video.currentTime;
+  const sectionId = getSectionId(time);
+  captionCount += 1;
+
+  // 로그 저장
+  logs.push({
+    user_id: userId,
+    section_id: sectionId,
+    action: "scrap",
+    value: 1,
+    timestamp: time
+  });
+
+  // 화면에 캡션 표시
+  const li = document.createElement("li");
+  li.textContent = `캡션 ${captionCount} - ${Math.floor(time)}초 (구간 ${sectionId})`;
+  captionList.appendChild(li);
+}
+
+// XLSX 다운로드
+function downloadXLSX() {
+  // logs 배열을 워크시트로 변환
+  const worksheet = XLSX.utils.json_to_sheet(logs);
+  
+  // 새 워크북 생성
+  const workbook = XLSX.utils.book_new();
+  
+  // 워크북에 워크시트 추가
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Watch Logs");
+  
+  // 파일 다운로드
+  XLSX.writeFile(workbook, "watch_log.xlsx");
+}
+</script>
+
+</body>
+</html>
